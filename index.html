@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chain Lens — Blockchain & DeFi Research</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e17; --bg2: #0f1520; --bg3: #141c2e;
+    --surface: #1a2236; --surface2: #1f2a40;
+    --border: rgba(99,179,237,0.12); --border2: rgba(99,179,237,0.22);
+    --accent: #4fffb0; --accent2: #00d4ff; --accent3: #7c6dff;
+    --text: #e8f0fe; --text2: #8ba0c0; --text3: #4a6080;
+    --danger: #ff6b6b; --warning: #ffb347;
+    --mono: 'DM Mono', monospace; --sans: 'DM Sans', sans-serif; --display: 'Syne', sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; overflow-x:hidden; }
+  body::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image: linear-gradient(rgba(99,179,237,0.03) 1px,transparent 1px), linear-gradient(90deg,rgba(99,179,237,0.03) 1px,transparent 1px);
+    background-size: 40px 40px;
+  }
+  .container { max-width:1000px; margin:0 auto; padding:0 24px; position:relative; z-index:1; }
+
+  /* Header */
+  header { padding:48px 0 40px; border-bottom:1px solid var(--border); }
+  .logo { font-family:var(--display); font-size:11px; font-weight:600; letter-spacing:0.3em; text-transform:uppercase; color:var(--accent); margin-bottom:20px; display:flex; align-items:center; gap:8px; }
+  .logo-dot { width:6px; height:6px; background:var(--accent); border-radius:50%; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+  h1 { font-family:var(--display); font-size:clamp(32px,5vw,52px); font-weight:800; line-height:1.1; letter-spacing:-0.02em; background:linear-gradient(135deg,#e8f0fe 0%,var(--accent2) 50%,var(--accent) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:12px; }
+  .subtitle { font-size:15px; color:var(--text2); font-weight:300; line-height:1.6; max-width:520px; }
+
+  /* Search */
+  .search-section { padding:48px 0 32px; }
+  .category-toggle { display:inline-flex; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:4px; margin-bottom:28px; gap:2px; }
+  .cat-btn { padding:10px 24px; border:none; border-radius:9px; background:transparent; color:var(--text2); font-family:var(--display); font-size:13px; font-weight:600; letter-spacing:0.05em; cursor:pointer; transition:all 0.2s; text-transform:uppercase; }
+  .cat-btn.active { background:var(--bg3); color:var(--text); box-shadow:0 0 0 1px var(--border2); }
+  .cat-btn[data-cat="blockchain"].active { color:var(--accent2); }
+  .cat-btn[data-cat="defi"].active { color:var(--accent); }
+  .search-bar { display:flex; gap:12px; align-items:stretch; }
+  .search-input-wrap { flex:1; position:relative; }
+  .search-icon { position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--text3); font-size:16px; pointer-events:none; }
+  .search-input { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 16px 16px 44px; color:var(--text); font-family:var(--sans); font-size:16px; font-weight:300; outline:none; transition:border-color 0.2s,background 0.2s; }
+  .search-input:focus { border-color:var(--border2); background:var(--surface2); }
+  .search-input::placeholder { color:var(--text3); }
+  .search-btn { background:var(--accent); border:none; border-radius:12px; padding:0 28px; color:#0a0e17; font-family:var(--display); font-size:14px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+  .search-btn:hover { opacity:0.88; transform:translateY(-1px); }
+  .search-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
+  .quick-picks { margin-top:14px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .quick-label { font-size:12px; color:var(--text3); font-family:var(--mono); }
+  .quick-chip { font-family:var(--mono); font-size:11px; padding:4px 12px; border-radius:100px; border:1px solid var(--border); background:transparent; color:var(--text2); cursor:pointer; transition:all 0.15s; }
+  .quick-chip:hover { border-color:var(--border2); color:var(--text); background:var(--surface); }
+
+  /* Loading */
+  .loading-state { display:none; padding:60px 0; text-align:center; }
+  .loading-state.visible { display:block; }
+  .loading-ring { width:48px; height:48px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 20px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loading-text { font-family:var(--mono); font-size:13px; color:var(--text2); }
+  .loading-step { font-size:12px; color:var(--text3); margin-top:8px; min-height:18px; }
+
+  /* Error */
+  .error-box { display:none; background:rgba(255,107,107,0.08); border:1px solid rgba(255,107,107,0.2); border-radius:12px; padding:20px 24px; margin:24px 0; color:var(--danger); font-size:14px; line-height:1.6; }
+  .error-box.visible { display:block; }
+
+  /* Results */
+  #results { padding-bottom:80px; }
+  .result-header { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:32px; padding-bottom:20px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:16px; }
+  .result-name { font-family:var(--display); font-size:clamp(28px,4vw,42px); font-weight:800; letter-spacing:-0.02em; color:var(--text); line-height:1.1; }
+  .result-badge { font-family:var(--mono); font-size:11px; padding:5px 14px; border-radius:100px; text-transform:uppercase; letter-spacing:0.1em; }
+  .result-badge.blockchain { background:rgba(0,212,255,0.1); color:var(--accent2); border:1px solid rgba(0,212,255,0.2); }
+  .result-badge.defi { background:rgba(79,255,176,0.1); color:var(--accent); border:1px solid rgba(79,255,176,0.2); }
+
+  /* Cards */
+  .section-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  @media (max-width:640px) { .section-grid { grid-template-columns:1fr; } }
+  .info-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px 22px; }
+  .info-card.wide { grid-column:1 / -1; }
+  .info-card-title { font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:var(--text3); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .info-card-title::before { content:''; display:inline-block; width:6px; height:6px; border-radius:2px; background:var(--accent); flex-shrink:0; }
+  .info-card-content { font-size:14px; color:var(--text2); line-height:1.7; }
+
+  /* Source links */
+  .source-links { margin-top:10px; display:flex; flex-wrap:wrap; gap:6px; }
+  .source-link { font-family:var(--mono); font-size:10px; padding:3px 10px; border-radius:4px; background:rgba(124,109,255,0.08); border:1px solid rgba(124,109,255,0.2); color:var(--accent3); text-decoration:none; transition:all 0.15s; }
+  .source-link:hover { background:rgba(124,109,255,0.15); color:#a99dff; }
+
+  /* Feature list */
+  .feature-list { list-style:none; display:flex; flex-direction:column; gap:10px; }
+  .feature-list li { font-size:13px; color:var(--text2); padding-left:16px; position:relative; line-height:1.6; }
+  .feature-list li::before { content:'→'; position:absolute; left:0; color:var(--accent); font-size:11px; top:2px; }
+  .feature-item-title { color:var(--text); font-weight:500; }
+  .feature-item-desc { color:var(--text2); font-size:12px; margin-top:2px; }
+  .feature-item-diff { color:var(--accent3); font-size:11px; margin-top:3px; font-family:var(--mono); }
+
+  /* Timeline */
+  .timeline { display:flex; flex-direction:column; }
+  .timeline-item { display:grid; grid-template-columns:80px 1fr; gap:16px; position:relative; padding-bottom:16px; }
+  .timeline-item:not(:last-child)::before { content:''; position:absolute; left:36px; top:22px; bottom:0; width:1px; background:var(--border); }
+  .timeline-year { font-family:var(--mono); font-size:12px; font-weight:500; color:var(--accent2); padding-top:3px; text-align:right; }
+  .timeline-event { font-size:13px; color:var(--text2); line-height:1.5; padding-top:2px; padding-left:12px; border-left:1px solid var(--border2); }
+
+  /* Tags */
+  .tag-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
+  .tag { font-family:var(--mono); font-size:11px; padding:4px 12px; border-radius:6px; background:var(--bg3); border:1px solid var(--border); color:var(--text2); }
+
+  /* Incident */
+  .incident-none { color:var(--accent); font-size:13px; }
+  .incident-found { color:var(--warning); font-size:13px; }
+  .incident-item { padding:10px 0; border-bottom:1px solid var(--border); }
+  .incident-item:last-child { border-bottom:none; }
+  .incident-header { display:flex; gap:10px; align-items:center; margin-bottom:4px; }
+  .incident-date { font-family:var(--mono); font-size:11px; color:var(--accent2); white-space:nowrap; }
+  .incident-title { font-size:13px; font-weight:500; color:var(--warning); }
+  .incident-detail { font-size:13px; color:var(--text2); line-height:1.5; }
+
+  /* Metric */
+  .metric-highlight { font-family:var(--display); font-size:22px; font-weight:700; color:var(--accent); margin-bottom:4px; }
+  .metric-sub { font-size:12px; color:var(--text3); }
+
+  /* Source note */
+  .source-note { margin-top:32px; padding:14px 18px; background:rgba(124,109,255,0.06); border:1px solid rgba(124,109,255,0.15); border-radius:10px; font-size:12px; color:var(--text3); line-height:1.6; }
+
+  ::-webkit-scrollbar { width:6px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--surface2); border-radius:3px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo"><span class="logo-dot"></span>Chain Lens Research</div>
+    <h1>Blockchain & DeFi<br>Intelligence</h1>
+    <p class="subtitle">プロジェクト名を入力するだけで、ブロックチェーン・DeFiの詳細情報を即座に調査・整理します</p>
+  </header>
+
+  <div class="search-section">
+    <div class="category-toggle">
+      <button class="cat-btn active" data-cat="blockchain" onclick="setCategory('blockchain')">⬡ Blockchain</button>
+      <button class="cat-btn" data-cat="defi" onclick="setCategory('defi')">◈ DeFi</button>
+    </div>
+    <div class="search-bar">
+      <div class="search-input-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" class="search-input" id="searchInput" placeholder="例: Ethereum, Solana, Avalanche..." onkeydown="if(event.key==='Enter') doSearch()">
+      </div>
+      <button class="search-btn" id="searchBtn" onclick="doSearch()">調査する</button>
+    </div>
+    <div class="quick-picks" id="quickPicks"></div>
+  </div>
+
+  <div class="loading-state" id="loadingState">
+    <div class="loading-ring"></div>
+    <div class="loading-text">調査中...</div>
+    <div class="loading-step" id="loadingStep">情報を収集しています</div>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+  <div id="results"></div>
+
+</div>
+<script>
+const QUICK_PICKS = {
+  blockchain: ['Ethereum','Solana','Avalanche','Polygon','Bitcoin','Cardano'],
+  defi:       ['Uniswap','Aave','Lido','Curve Finance','EigenLayer','Compound']
+};
+let currentCategory = 'blockchain';
+
+function setCategory(cat) {
+  currentCategory = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+  document.getElementById('searchInput').placeholder = cat === 'blockchain' ? '例: Ethereum, Solana, Avalanche...' : '例: Uniswap, Aave, Lido...';
+  renderQuickPicks();
+}
+function renderQuickPicks() {
+  document.getElementById('quickPicks').innerHTML =
+    '<span class="quick-label">例：</span>' +
+    QUICK_PICKS[currentCategory].map(p => `<button class="quick-chip" onclick="quickSearch('${p}')">${p}</button>`).join('');
+}
+function quickSearch(n) { document.getElementById('searchInput').value = n; doSearch(); }
+
+// ─── プロンプト ───────────────────────────────────────────────
+
+function buildBlockchainPrompt(name) {
+  return `あなたはブロックチェーン・暗号資産分野の専門アナリストです。
+「${name}」について調査し、以下のJSONスキーマに従ってJSONのみを返してください。マークダウン記法は不要です。
+
+【出力の指針】
+- 各テキストフィールドは簡潔に。1項目あたり1〜3文を目安とし、箇条書き的に事実を積み重ねる
+- overview: 「何のためのチェーンか」「他と何が違うか」を3〜4文で端的に
+- technical_features: title（10字以内）・description（1〜2文）・differentiator（1文、具体的な技術差異のみ）
+- history: メインネット本番環境の出来事のみ。テストネット・ローンチ前情報は除外。最低8件、年/月付きで
+- security_incidents: メインネット本番環境のみ対象。テストネット・開発環境の問題は除外。ハッキング・障害・フォーク騒動を「日付・内容・影響」の形式で箇条書き。問題なければ「メインネットローンチ以来、重大なインシデントの報告なし」
+- partnerships: 「機関名：内容」の形式で簡潔に
+- sources: 各項目の根拠となった実在するURLを列挙。labelは対応する項目名（例:「概要」「技術的特徴」「開発歴」「連携実績」「インシデント」）
+
+{
+  "official_name": "正式名称",
+  "native_token": "トークン名 / シンボル",
+  "governance": "運営体名",
+  "overview": "概要（3〜4文）",
+  "consensus": "アルゴリズム名：仕組みを1〜2文で",
+  "technical_features": [
+    {"title": "特徴名（10字以内）", "description": "1〜2文の説明", "differentiator": "他チェーンとの差異1文"}
+  ],
+  "use_cases": ["ユースケース：具体的な用途を1文で"],
+  "history": [
+    {"year": 2015, "month": 7, "event": "出来事を1〜2文で（メインネットのみ）", "source_url": "https://..."}
+  ],
+  "future_roadmap": "箇条書き的に3〜5項目を簡潔に",
+  "partnerships": ["機関名：連携内容を1文で"],
+  "security_incidents": [
+    {"date": "YYYY/MM", "title": "インシデント名", "detail": "内容・影響を1〜2文（メインネットのみ）", "source_url": "https://..."}
+  ],
+  "market_cap": "時価総額（リアルタイムデータがあればそれを優先）",
+  "sources": [
+    {"label": "概要", "url": "https://..."},
+    {"label": "技術的特徴", "url": "https://..."},
+    {"label": "開発歴", "url": "https://..."},
+    {"label": "連携実績", "url": "https://..."},
+    {"label": "インシデント", "url": "https://..."}
+  ]
+}`;
+}
+
+function buildDefiPrompt(name) {
+  return `あなたはDeFi・ブロックチェーン分野の専門アナリストです。
+「${name}」について調査し、以下のJSONスキーマに従ってJSONのみを返してください。マークダウン記法は不要です。
+
+【出力の指針】
+- 各テキストフィールドは簡潔に。1項目あたり1〜3文を目安とし、箇条書き的に事実を積み重ねる
+- overview: 「何のためのプロトコルか」「他と何が違うか」を3〜4文で端的に
+- technical_features: title（10字以内）・description（1〜2文）・differentiator（1文、具体的な技術差異のみ）
+- history: 本番プロトコル（メインネット上）の出来事のみ。テストネット・監査前情報は除外。最低8件、年/月付きで
+- security_incidents: 本番プロトコル上のみ対象。テストネット・監査指摘は除外。ハッキング・バグ・資金流出を「日付・内容・流出額・影響」の形式で箇条書き。問題なければ「本番ローンチ以来、重大なインシデントの報告なし」
+- partnerships: 「機関名：内容」の形式で簡潔に
+- sources: 各項目の根拠となった実在するURLを列挙。labelは対応する項目名
+
+{
+  "official_name": "正式名称",
+  "category": "DEX / レンディング / ステーキング / リステーキング 等",
+  "governance": "運営体名",
+  "chains": ["対応チェーン1", "対応チェーン2"],
+  "overview": "概要（3〜4文）",
+  "technical_features": [
+    {"title": "特徴名（10字以内）", "description": "1〜2文の説明", "differentiator": "他プロトコルとの差異1文"}
+  ],
+  "use_cases": ["ユースケース：具体的な用途を1文で"],
+  "history": [
+    {"year": 2018, "month": 11, "event": "出来事を1〜2文で（本番のみ）", "source_url": "https://..."}
+  ],
+  "future_roadmap": "箇条書き的に3〜5項目を簡潔に",
+  "partnerships": ["機関名：連携内容を1文で"],
+  "security_incidents": [
+    {"date": "YYYY/MM", "title": "インシデント名", "detail": "内容・流出額・影響を1〜2文（本番のみ）", "source_url": "https://..."}
+  ],
+  "tvl": "TVL（リアルタイムデータがあればそれを優先）",
+  "monthly_volume": "月間取引高（リアルタイムデータがあればそれを優先）",
+  "sources": [
+    {"label": "概要", "url": "https://..."},
+    {"label": "技術的特徴", "url": "https://..."},
+    {"label": "開発歴", "url": "https://..."},
+    {"label": "連携実績", "url": "https://..."},
+    {"label": "インシデント", "url": "https://..."},
+    {"label": "DeFiLlama", "url": "https://defillama.com/protocol/..."}
+  ]
+}`;
+}
+
+// ─── API呼び出し ──────────────────────────────────────────────
+
+async function callAPI(prompt) {
+  const query = document.getElementById('searchInput').value.trim();
+  const res = await fetch('/api/ask', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, category: currentCategory, query })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `APIエラー: ${res.status}`);
+  if (!data.text) throw new Error('APIからの応答が空でした');
+  return data;
+}
+
+function parseJSON(raw) {
+  let c = raw.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();
+  const s = c.indexOf('{'), e = c.lastIndexOf('}');
+  if (s === -1 || e === -1) throw new Error('JSONを取得できませんでした');
+  c = c.slice(s, e + 1);
+  try { return JSON.parse(c); }
+  catch(_) {
+    c = c.replace(/,\s*}/g,'}').replace(/,\s*]/g,']');
+    try { return JSON.parse(c); }
+    catch(__) { throw new Error('JSONの解析に失敗しました。再度お試しください。'); }
+  }
+}
+
+// ─── 描画ヘルパー ─────────────────────────────────────────────
+
+function srcLinks(sources, labelFilter) {
+  if (!sources || !sources.length) return '';
+  let list = sources.filter(s => s.url && s.url.startsWith('http'));
+  if (labelFilter) list = list.filter(s => s.label && s.label.includes(labelFilter));
+  const links = list.map(s =>
+    `<a class="source-link" href="${s.url}" target="_blank" rel="noopener">🔗 ${s.label || s.url}</a>`
+  ).join('');
+  return links ? `<div class="source-links" style="margin-top:8px">${links}</div>` : '';
+}
+
+function renderFeatures(arr, sources) {
+  if (!arr || !arr.length) return '<li>情報なし</li>';
+  return arr.map(f => {
+    if (typeof f === 'string') return `<li>${f}</li>`;
+    return `<li>
+      <div class="feature-item-title">${f.title || ''}</div>
+      <div class="feature-item-desc">${f.description || ''}</div>
+      ${f.differentiator ? `<div class="feature-item-diff">▶ ${f.differentiator}</div>` : ''}
+    </li>`;
+  }).join('');
+}
+
+function renderTimeline(history) {
+  if (!history || !history.length) return '<p style="color:var(--text3);font-size:13px">情報なし</p>';
+  return [...history]
+    .sort((a,b) => (a.year*100+(a.month||0)) - (b.year*100+(b.month||0)))
+    .map(h => {
+      const srcBtn = h.source_url && h.source_url.startsWith('http')
+        ? `<a class="source-link" style="margin-top:4px;display:inline-block" href="${h.source_url}" target="_blank" rel="noopener">🔗 出典</a>`
+        : '';
+      return `<div class="timeline-item">
+        <div class="timeline-year">${h.year||'?'}${h.month ? '/'+String(h.month).padStart(2,'0') : ''}</div>
+        <div class="timeline-event">${h.event||''}${srcBtn}</div>
+      </div>`;
+    }).join('');
+}
+
+function renderTags(arr) {
+  if (!arr || !arr.length) return '<span class="tag">情報なし</span>';
+  return arr.map(p => `<span class="tag">${p}</span>`).join('');
+}
+
+function renderList(arr) {
+  if (!arr || !arr.length) return '<li>情報なし</li>';
+  return arr.map(i => `<li>${i}</li>`).join('');
+}
+
+function renderIncident(data) {
+  if (!data) return '<span class="incident-none">情報なし</span>';
+  // 文字列の場合（後方互換）
+  if (typeof data === 'string') {
+    const isNone = data.includes('重大なインシデントの報告なし') || data.includes('特記なし') || data.includes('ローンチ以来');
+    return `<span class="${isNone ? 'incident-none' : 'incident-found'}">${data}</span>`;
+  }
+  // 配列の場合
+  if (!Array.isArray(data) || data.length === 0) return '<span class="incident-none">情報なし</span>';
+  // 「なし」判定
+  if (data.length === 1 && typeof data[0] === 'string' && (data[0].includes('報告なし') || data[0].includes('特記なし'))) {
+    return `<span class="incident-none">${data[0]}</span>`;
+  }
+  return data.map(inc => {
+    if (typeof inc === 'string') return `<div class="incident-item"><span class="incident-found">${inc}</span></div>`;
+    const srcBtn = inc.source_url && inc.source_url.startsWith('http')
+      ? `<a class="source-link" href="${inc.source_url}" target="_blank" rel="noopener">🔗 出典</a>`
+      : '';
+    return `<div class="incident-item">
+      <div class="incident-header">
+        <span class="incident-date">${inc.date || ''}</span>
+        <span class="incident-title">${inc.title || ''}</span>
+      </div>
+      <div class="incident-detail">${inc.detail || ''}</div>
+      ${srcBtn ? `<div style="margin-top:4px">${srcBtn}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ─── 結果HTML ─────────────────────────────────────────────────
+
+function renderBlockchainResult(d) {
+  const s = d.sources || [];
+  return `
+    <div class="result-header">
+      <div>
+        <div class="result-name">${d.official_name||'—'}</div>
+        <div style="margin-top:6px;font-size:14px;color:var(--text2);font-family:var(--mono)">${d.native_token||''}</div>
+      </div>
+      <span class="result-badge blockchain">Blockchain</span>
+    </div>
+
+    <div class="section-grid">
+      <div class="info-card">
+        <div class="info-card-title">時価総額（現在）</div>
+        <div class="info-card-content">
+          <div class="metric-highlight">${d.market_cap||'—'}</div>
+          ${srcLinks(s,'CoinMarket')}
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-title">運営体</div>
+        <div class="info-card-content">${d.governance||'—'}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-title">コンセンサスアルゴリズム</div>
+        <div class="info-card-content">${d.consensus||'—'}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-title">ネイティブトークン</div>
+        <div class="info-card-content">${d.native_token||'—'}</div>
+      </div>
+
+      <div class="info-card wide">
+        <div class="info-card-title">概要</div>
+        <div class="info-card-content">${d.overview||'情報なし'}</div>
+        ${srcLinks(s,'概要')}
+      </div>
+
+      <div class="info-card wide">
+        <div class="info-card-title">技術的特徴（他チェーンとの差異）</div>
+        <div class="info-card-content">
+          <ul class="feature-list">${renderFeatures(d.technical_features)}</ul>
+        </div>
+        ${srcLinks(s,'技術')}
+      </div>
+
+      <div class="info-card wide">
+        <div class="info-card-title">想定ユースケース</div>
+        <div class="info-card-content"><ul class="feature-list">${renderList(d.use_cases)}</ul></div>
+      </div>
+
+      <div class="info-card wide">
+        <div class="info-card-title">開発歴・アップグレードの歴史</div>
+        <div class="info-card-content"><div class="timeline">${renderTimeline(d.history)}</div></div>
+        ${srcLinks(s,'開発歴')}
+      </div>
+
+      <div class="info-card wide">
+        <div class="info-card-title">今後の戦略・アップデート方針</div>
+        <div class="info-card-content">${d.future_roadmap||'情報なし'}</div>
+      </div>
+
+      <div class="info-card wide">
+        <div class="info-card-title">金融機関・決済業者・取引所との連携実績</div>
+        <div class="info-card-content"><div class="tag-list">${renderTags(d.partnerships)}</div></div>
+        ${srcLinks(s,'連携')}
+      </div>
+
+      <div class="info-card wide">
+        <div class="info-card-title">セキュリティインシデント・障害・流出事故事例（メインネットのみ）</div>
+        <div class="info-card-content">${renderIncident(d.security_incidents)}</div>
+        ${srcLinks(s,'インシデント')}
+      </div>
+    </div>
+
+    <div class="source-note">
+      ⚠ 本情報はGemini AIによる生成情報です。時価総額はCoinMarketCap APIのリアルタイムデータです。投資判断等には使用しないでください。
+      <br>【全参照元】${srcLinks(s)}
+    </div>`;
+}
+
+function renderDefiResult(d) {
+  const s = d.sources || [];
+  return `
+    <div class="result-header">
+      <div>
+        <div class="result-name">${d.official_name||'—'}</div>
+        <div style="margin-top:6px;font-size:14px;color:var(--text2);font-family:var(--mono)">${d.category||''}</div>
+      </div>
+      <span class="result-badge defi">DeFi</span>
+    </div>
+
+    <div class="section-grid">
+      <div class="info-card">
+        <div class="info-card-title">TVL（現在）</div>
+        <div class="info-card-content">
+          <div class="metric-highlight">${d.tvl||'—'}</div>
+          ${srcLinks(s,'DeFiLlama')}
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-title">月間取引高</div>
+        <div class="info-card-content">
+          <div class="metric-highlight">${d.monthly_volume||'—'}</div>
+          ${srcLinks(s,'DeFiLlama')}
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-title">カテゴリー</div>
+        <div class="info-card-content">${d.category||'—'}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-title">運営体</div>
+        <div class="info-card-content">${d.governance||'—'}</div>
+      </div>
+
+      <div class="info-card wide">
+        <div class="info-card-title">対応ブロックチェーン</div>
+        <div class="info-card-content"><div class="tag-list">${renderTags(d.chains)}</div></div>
+      </div>
+
+      <div class="info-card wide">
+        <div class="info-card-title">概要</div>
+        <div class="info-card-content">${d.overview||'情報なし'}</div>
+        ${srcLinks(s,'概要')}
+      </div>
+
+      <div class="info-card wide">
+        <div class="info-card-title">技術的特徴（他プロトコルとの差異）</div>
+        <div class="info-card-content">
+          <ul class="feature-list">${renderFeatures(d.technical_features)}</ul>
+        </div>
+        ${srcLinks(s,'技術')}
+      </div>
+
+      <div class="info-card wide">
+        <div class="info-card-title">想定ユースケース</div>
+        <div class="info-card-content"><ul class="feature-list">${renderList(d.use_cases)}</ul></div>
+      </div>
+
+      <div class="info-card wide">
+        <div class="info-card-title">開発歴・アップグレードの歴史</div>
+        <div class="info-card-content"><div class="timeline">${renderTimeline(d.history)}</div></div>
+        ${srcLinks(s,'開発歴')}
+      </div>
+
+      <div class="info-card wide">
+        <div class="info-card-title">今後の戦略・アップデート方針</div>
+        <div class="info-card-content">${d.future_roadmap||'情報なし'}</div>
+      </div>
+
+      <div class="info-card wide">
+        <div class="info-card-title">金融機関・決済業者・取引所との連携実績</div>
+        <div class="info-card-content"><div class="tag-list">${renderTags(d.partnerships)}</div></div>
+        ${srcLinks(s,'連携')}
+      </div>
+
+      <div class="info-card wide">
+        <div class="info-card-title">セキュリティインシデント・障害・流出事故事例（本番のみ）</div>
+        <div class="info-card-content">${renderIncident(d.security_incidents)}</div>
+        ${srcLinks(s,'インシデント')}
+      </div>
+    </div>
+
+    <div class="source-note">
+      ⚠ 本情報はGemini AIによる生成情報です。TVL・月間取引高はDeFiLlama APIのリアルタイムデータです。投資判断等には使用しないでください。
+      <br>【全参照元】${srcLinks(s)}
+    </div>`;
+}
+
+// ─── メイン処理 ───────────────────────────────────────────────
+
+const STEPS = ['プロンプト生成中...','AIに送信中...','リアルタイムデータ取得中...','情報を整理中...','もうすぐ完了...'];
+
+async function doSearch() {
+  const query = document.getElementById('searchInput').value.trim();
+  if (!query) { document.getElementById('searchInput').focus(); return; }
+
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('errorBox').className = 'error-box';
+  document.getElementById('loadingState').className = 'loading-state visible';
+  document.getElementById('searchBtn').disabled = true;
+
+  let si = 0;
+  document.getElementById('loadingStep').textContent = STEPS[0];
+  const timer = setInterval(() => {
+    si = Math.min(si+1, STEPS.length-1);
+    document.getElementById('loadingStep').textContent = STEPS[si];
+  }, 2500);
+
+  try {
+    const prompt = currentCategory === 'blockchain' ? buildBlockchainPrompt(query) : buildDefiPrompt(query);
+    const resp = await callAPI(prompt);
+    const d = parseJSON(resp.text);
+
+    // リアルタイムデータで上書き
+    if (resp.realtimeData) {
+      const rt = resp.realtimeData;
+      if (currentCategory === 'blockchain') {
+        if (rt.market_cap) d.market_cap = rt.market_cap;
+        if (rt.cmc_url && d.sources) d.sources.push({ label: 'CoinMarketCap（リアルタイム）', url: rt.cmc_url });
+      } else {
+        if (rt.tvl)            d.tvl = rt.tvl;
+        if (rt.monthly_volume) d.monthly_volume = rt.monthly_volume;
+        if (rt.defillama_url && d.sources) d.sources.push({ label: 'DeFiLlama（リアルタイム）', url: rt.defillama_url });
+      }
+    }
+
+    clearInterval(timer);
+    document.getElementById('loadingState').className = 'loading-state';
+    document.getElementById('searchBtn').disabled = false;
+
+    const html = currentCategory === 'blockchain' ? renderBlockchainResult(d) : renderDefiResult(d);
+    document.getElementById('results').innerHTML = html;
+    document.getElementById('results').scrollIntoView({ behavior:'smooth', block:'start' });
+
+  } catch(err) {
+    clearInterval(timer);
+    document.getElementById('loadingState').className = 'loading-state';
+    document.getElementById('searchBtn').disabled = false;
+    const box = document.getElementById('errorBox');
+    box.textContent = `エラーが発生しました：${err.message}`;
+    box.className = 'error-box visible';
+  }
+}
+
+window.addEventListener('DOMContentLoaded', renderQuickPicks);
+</script>
+</body>
+</html>
